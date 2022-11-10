@@ -34,7 +34,9 @@ void GameScene::Initialize(DirectXCommon* dxCommon, Input* input)
 	spriteBG = Sprite::Create(1, { 0.0f,0.0f });
 	// 3Dオブジェクト生成
 	object3d = Object3d::Create();
+	object02 = Object3d::Create();
 	object3d->Update();
+	object02->Update();
 	//テクスチャ2番に読み込み
 	Sprite::LoadTexture(2, L"Resources/texture.png");
 	//座標{0,0}に、テクスチャ2番のスプライトを生成
@@ -110,6 +112,7 @@ void GameScene::Draw()
 
 	// 3Dオブクジェクトの描画
 	object3d->Draw();
+	object02->Draw();
 
 	/// <summary>
 	/// ここに3Dオブジェクトの描画処理を追加できる
