@@ -11,6 +11,7 @@ GameScene::~GameScene()
 {
 	delete spriteBG;
 	delete object3d;
+	delete model_;
 }
 
 void GameScene::Initialize(DirectXCommon* dxCommon, Input* input)
@@ -32,15 +33,13 @@ void GameScene::Initialize(DirectXCommon* dxCommon, Input* input)
 
 	// 背景スプライト生成
 	spriteBG = Sprite::Create(1, { 0.0f,0.0f });
+	//OBJからモデルを読み込む
+	model_ = Model::LoadFromOBJ("triangle_mat");
 	// 3Dオブジェクト生成
 	object3d = Object3d::Create();
-	object02 = Object3d::Create();
 	object3d->Update();
-	//オブジェクト02座標設定
-	XMFLOAT3 position02 = object02->GetPosition();
-	position02 = { 25.0f,5.0f,0.0f };
-	object02->SetPosition(position02);
-	object02->Update();
+	//オブジェクトにモデルを紐づける
+	object3d->SetModel(model_);
 	//テクスチャ2番に読み込み
 	Sprite::LoadTexture(2, L"Resources/texture.png");
 	//座標{0,0}に、テクスチャ2番のスプライトを生成
@@ -116,7 +115,6 @@ void GameScene::Draw()
 
 	// 3Dオブクジェクトの描画
 	object3d->Draw();
-	object02->Draw();
 
 	/// <summary>
 	/// ここに3Dオブジェクトの描画処理を追加できる
