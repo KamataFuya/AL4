@@ -36,6 +36,10 @@ void GameScene::Initialize(DirectXCommon* dxCommon, Input* input)
 	object3d = Object3d::Create();
 	object02 = Object3d::Create();
 	object3d->Update();
+	//オブジェクト02座標設定
+	XMFLOAT3 position02 = object02->GetPosition();
+	position02 = { 25.0f,5.0f,0.0f };
+	object02->SetPosition(position02);
 	object02->Update();
 	//テクスチャ2番に読み込み
 	Sprite::LoadTexture(2, L"Resources/texture.png");
