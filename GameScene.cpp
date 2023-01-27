@@ -63,6 +63,10 @@ void GameScene::Initialize(DirectXCommon* dxCommon, Input* input)
 	triangle.p1 = XMVectorSet(-1.0f, 0, +1.0f, 1); //左奥
 	triangle.p2 = XMVectorSet(+1.0f, 0, -1.0f, 1); //右手前
 	triangle.normal = XMVectorSet(0.0f,1.0f,0.0f,0); //上向き
+
+	//レイの初期値を設定
+	ray.start = XMVectorSet(0, 1, 0, 1); //原点やや上
+	ray.dir = XMVectorSet(0, -1, 0, 0); //下向き
 }
 
 void GameScene::Update()
@@ -119,6 +123,32 @@ void GameScene::Update()
 		<< sphere.center.m128_f32[2] << ")"; //z
 	debugText.Print(spherestr.str(), 50, 180, 1.0f);
 
+	//レイ操作
+	{
+		XMVECTOR moveY = XMVectorSet(0, 0.01f,0, 0);
+		if (input->PushKey(DIK_8)) {
+			ray.start += moveY;
+		}
+		else if (input->PushKey(DIK_2)) {
+			ray.start -= moveY;
+		}
+
+		XMVECTOR moveX = XMVectorSet(0.01f, 0, 0, 0);
+		if (input->PushKey(DIK_6)) {
+			ray.start += moveX;
+		}
+		else if (input->PushKey(DIK_4)) {
+			ray.start -= moveX;
+		}
+	}
+	std::ostringstream raystr;
+	raystr << "ray.start("
+		<< std::fixed << std::setprecision(2)
+		<< ray.start.m128_f32[0] << ","
+		<< ray.start.m128_f32[1] << ","
+		<< ray.start.m128_f32[2] << ")";
+	debugText.Print(raystr.str(), 50, 240, 1.0f);
+
 	//球と平面の当たり判定
 	/*{
 		bool hit = Collision::CheckSphere2Plane(sphere, plane);
@@ -144,21 +174,39 @@ void GameScene::Update()
 	//	}
 	//}
 	//球と三角形の当たり判定
+	//{
+	//	XMVECTOR inter;
+	//	bool hit = Collision::CheckSphere2Triangle(sphere, triangle, &inter);
+	//	if (hit) {
+	//		debugText.Print("HIT", 50, 200, 1.0f);
+	//		//stringstreamをリセットし、交点座標を埋め込む
+	//		spherestr.str("""");
+	//		spherestr.clear();
+	//		spherestr << "("
+	//			<< std::fixed << std::setprecision(2)
+	//			<< inter.m128_f32[0] << ","
+	//			<< inter.m128_f32[1] << ","
+	//			<< inter.m128_f32[2] << ")";
+
+	//		debugText.Print(spherestr.str(), 50, 220, 1.0f);
+	//	}
+	//}
+	//レイと平面の当たり判定
 	{
 		XMVECTOR inter;
-		bool hit = Collision::CheckSphere2Triangle(sphere, triangle, &inter);
+		float distance;
+		bool hit = Collision::CheckRay2Plane(ray, plane, &distance, &inter);
 		if (hit) {
-			debugText.Print("HIT", 50, 200, 1.0f);
+			debugText.Print("HIT", 50, 260, 1.0f);
 			//stringstreamをリセットし、交点座標を埋め込む
-			spherestr.str("""");
-			spherestr.clear();
-			spherestr << "("
+			raystr.str("""");
+			raystr.clear();
+			raystr << "("
 				<< std::fixed << std::setprecision(2)
 				<< inter.m128_f32[0] << ","
 				<< inter.m128_f32[1] << ","
 				<< inter.m128_f32[2] << ")";
-
-			debugText.Print(spherestr.str(), 50, 220, 1.0f);
+			debugText.Print(raystr.str(), 50, 280, 1.0f);
 		}
 	}
 
