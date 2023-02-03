@@ -15,6 +15,9 @@ GameScene::~GameScene()
 	delete spriteBG;
 	delete object3d;
 	delete model_;
+	delete modelPlane_;
+	delete modelTriangle_;
+	delete modelHitSphere_;
 }
 
 void GameScene::Initialize(DirectXCommon* dxCommon, Input* input)
@@ -37,12 +40,20 @@ void GameScene::Initialize(DirectXCommon* dxCommon, Input* input)
 	// 背景スプライト生成
 	spriteBG = Sprite::Create(1, { 0.0f,0.0f });
 	//OBJからモデルを読み込む
-	/*model_ = Model::LoadFromOBJ("Core");*/ //頂点数が多く、表示できないので調整する
-	model_ = Model::LoadFromOBJ("triangle_mat");
+	model_ = Model::LoadFromOBJ("SphereBefore");
+	modelPlane_ = Model::LoadFromOBJ("Plane");
+	modelTriangle_ = Model::LoadFromOBJ("triangle_mat");
+	modelHitSphere_ = Model::LoadFromOBJ("SphereAfter");
 	// 3Dオブジェクト生成
 	object3d = Object3d::Create();
+	plane_ = Object3d::Create();
+	triangle_ = Object3d::Create();
+	hitSphere_ = Object3d::Create();
 	//オブジェクトにモデルを紐づける
 	object3d->SetModel(model_);
+	plane_->SetModel(modelPlane_);
+	triangle_->SetModel(modelTriangle_);
+	hitSphere_->SetModel(modelHitSphere_);
 	//テクスチャ2番に読み込み
 	Sprite::LoadTexture(2, L"Resources/texture.png");
 	//座標{0,0}に、テクスチャ2番のスプライトを生成
@@ -51,12 +62,16 @@ void GameScene::Initialize(DirectXCommon* dxCommon, Input* input)
 	sprite02 = Sprite::Create(2, { 500,500 }, { 1,0,0,1 }, { 0,0 }, false, true);
 
 	//球の初期値を設定
-	sphere.center = XMVectorSet(0, 2, 0, 1); //中心座標
-	sphere.radius = 1.0f; //半径
+	sphere.center = XMVectorSet(0, 0, 0, 1); //中心座標
+	sphere.radius = 6.0f; //半径
 
 	//平面の初期値を設定
 	plane.normal = XMVectorSet(0, 1, 0, 0); //法線ベクトル
-	plane.distance = 0.0f; //原点(0,0,0)からの距離
+	plane.distance = -15.0f; //原点(0,0,0)からの距離
+
+	XMFLOAT3 planePosition = plane_->GetPosition();
+	planePosition.y -= 15.0f;
+	plane_->SetPosition(planePosition);
 
 	//三角形の初期値を設定
 	triangle.p0 = XMVectorSet(-1.0f, 0, -1.0f, 1); //左手前
@@ -71,21 +86,20 @@ void GameScene::Initialize(DirectXCommon* dxCommon, Input* input)
 
 void GameScene::Update()
 {
-	// オブジェクト移動
-	if (input->PushKey(DIK_UP) || input->PushKey(DIK_DOWN) || input->PushKey(DIK_RIGHT) || input->PushKey(DIK_LEFT))
-	{
-		// 現在の座標を取得
-		XMFLOAT3 position = object3d->GetPosition();
-
-		// 移動後の座標を計算
-		if (input->PushKey(DIK_UP)) { position.y += 1.0f; }
-		else if (input->PushKey(DIK_DOWN)) { position.y -= 1.0f; }
-		if (input->PushKey(DIK_RIGHT)) { position.x += 1.0f; }
-		else if (input->PushKey(DIK_LEFT)) { position.x -= 1.0f; }
-
-		// 座標の変更を反映
-		object3d->SetPosition(position);
+	//オブジェクトの移動
+	// 現在の座標を取得
+	XMFLOAT3 position = object3d->GetPosition();
+	position.y += speedY;
+	if (position.y >= 10.0f || position.y <= -30.0f) {
+		speedY *= -1;
+		moveCollisionY *= -1;
 	}
+	// 座標の変更を反映
+	object3d->SetPosition(position);
+	hitSphere_->SetPosition(position);
+	//判定の移動
+	//移動後の座標を計算
+	sphere.center += moveCollisionY;
 
 	// カメラ移動
 	if (input->PushKey(DIK_W) || input->PushKey(DIK_S) || input->PushKey(DIK_D) || input->PushKey(DIK_A))
@@ -96,24 +110,6 @@ void GameScene::Update()
 		else if (input->PushKey(DIK_A)) { Object3d::CameraMoveVector({ -1.0f,0.0f,0.0f }); }
 	}
 
-	//球移動
-	{
-		XMVECTOR moveY = XMVectorSet(0, 0.01f, 0, 0);
-		if (input->PushKey(DIK_8)) {
-			sphere.center += moveY;
-		}
-		else if (input->PushKey(DIK_2)) {
-			sphere.center -= moveY;
-		}
-
-		XMVECTOR moveX = XMVectorSet(0.01f, 0, 0, 0);
-		if (input->PushKey(DIK_6)) {
-			sphere.center += moveX;
-		}
-		else if (input->PushKey(DIK_4)) {
-			sphere.center -= moveX;
-		}
-	}
 	//stringstreamで変数の値を埋め込んで整形する
 	std::ostringstream spherestr;
 	spherestr << "Sphere : ("
@@ -123,39 +119,43 @@ void GameScene::Update()
 		<< sphere.center.m128_f32[2] << ")"; //z
 	debugText.Print(spherestr.str(), 50, 180, 1.0f);
 
-	//レイ操作
-	{
-		XMVECTOR moveY = XMVectorSet(0, 0.01f,0, 0);
-		if (input->PushKey(DIK_8)) {
-			ray.start += moveY;
-		}
-		else if (input->PushKey(DIK_2)) {
-			ray.start -= moveY;
-		}
+	////レイ操作
+	//{
+	//	XMVECTOR moveY = XMVectorSet(0, 0.01f,0, 0);
+	//	if (input->PushKey(DIK_8)) {
+	//		ray.start += moveY;
+	//	}
+	//	else if (input->PushKey(DIK_2)) {
+	//		ray.start -= moveY;
+	//	}
 
-		XMVECTOR moveX = XMVectorSet(0.01f, 0, 0, 0);
-		if (input->PushKey(DIK_6)) {
-			ray.start += moveX;
-		}
-		else if (input->PushKey(DIK_4)) {
-			ray.start -= moveX;
-		}
-	}
-	std::ostringstream raystr;
-	raystr << "ray.start("
-		<< std::fixed << std::setprecision(2)
-		<< ray.start.m128_f32[0] << ","
-		<< ray.start.m128_f32[1] << ","
-		<< ray.start.m128_f32[2] << ")";
-	debugText.Print(raystr.str(), 50, 240, 1.0f);
+	//	XMVECTOR moveX = XMVectorSet(0.01f, 0, 0, 0);
+	//	if (input->PushKey(DIK_6)) {
+	//		ray.start += moveX;
+	//	}
+	//	else if (input->PushKey(DIK_4)) {
+	//		ray.start -= moveX;
+	//	}
+	//}
+	//std::ostringstream raystr;
+	//raystr << "ray.start("
+	//	<< std::fixed << std::setprecision(2)
+	//	<< ray.start.m128_f32[0] << ","
+	//	<< ray.start.m128_f32[1] << ","
+	//	<< ray.start.m128_f32[2] << ")";
+	//debugText.Print(raystr.str(), 50, 240, 1.0f);
 
 	//球と平面の当たり判定
-	/*{
+	{
 		bool hit = Collision::CheckSphere2Plane(sphere, plane);
 		if (hit) {
 			debugText.Print("HIT", 50, 200, 1.0f);
+			hitFlag = true;
 		}
-	}*/
+		else {
+			hitFlag = false;
+		}
+	}
 	//交点を算出するパターン --> 当たった場所にヒットエフェクトを発生させたい場合などに使う
 	//{
 	//	XMVECTOR inter;
@@ -191,24 +191,44 @@ void GameScene::Update()
 	//		debugText.Print(spherestr.str(), 50, 220, 1.0f);
 	//	}
 	//}
-	//レイと平面の当たり判定
-	{
-		XMVECTOR inter;
-		float distance;
-		bool hit = Collision::CheckRay2Plane(ray, plane, &distance, &inter);
-		if (hit) {
-			debugText.Print("HIT", 50, 260, 1.0f);
-			//stringstreamをリセットし、交点座標を埋め込む
-			raystr.str("""");
-			raystr.clear();
-			raystr << "("
-				<< std::fixed << std::setprecision(2)
-				<< inter.m128_f32[0] << ","
-				<< inter.m128_f32[1] << ","
-				<< inter.m128_f32[2] << ")";
-			debugText.Print(raystr.str(), 50, 280, 1.0f);
-		}
-	}
+	////レイと平面の当たり判定
+	//{
+	//	XMVECTOR inter;
+	//	float distance;
+	//	bool hit = Collision::CheckRay2Plane(ray, plane, &distance, &inter);
+	//	if (hit) {
+	//		debugText.Print("HIT", 50, 260, 1.0f);
+	//		//stringstreamをリセットし、交点座標を埋め込む
+	//		raystr.str("""");
+	//		raystr.clear();
+	//		raystr << "("
+	//			<< std::fixed << std::setprecision(2)
+	//			<< inter.m128_f32[0] << ","
+	//			<< inter.m128_f32[1] << ","
+	//			<< inter.m128_f32[2] << ")";
+	//		debugText.Print(raystr.str(), 50, 280, 1.0f);
+	//	}
+	//}
+	////レイと三角形の当たり判定
+	//{
+	//	float distance;
+	//	XMVECTOR inter;
+	//	bool hit = Collision::CheckRay2Triangle(ray, triangle, &distance, &inter);
+	//	if (hit) {
+	//		debugText.Print("HIT", 50, 300, 1.0f);
+	//		//stringstreamをリセットし、交差座標を埋め込む
+	//		raystr.str("""");
+	//		raystr.clear();
+	//		raystr << "inter : (" << std::fixed << std::setprecision(2)
+	//			<< inter.m128_f32[0] << "," << inter.m128_f32[1] << "," << inter.m128_f32[2] << ")";
+	//		debugText.Print(raystr.str(), 50, 320, 1.0f);
+
+	//		raystr.str("""");
+	//		raystr.clear();
+	//		raystr << "distance : (" << std::fixed << std::setprecision(2) << distance << "(";
+	//		debugText.Print(raystr.str(), 50, 340, 1.0f);
+	//	}
+	//}
 
 	//スペースキーを押していたら
 	if (input->PushKey(DIK_SPACE)) {
@@ -220,7 +240,11 @@ void GameScene::Update()
 		sprite01->SetPosition(position);
 	}
 
+	//モデル更新処理
 	object3d->Update();
+	plane_->Update();
+	triangle_->Update();
+	hitSphere_->Update();
 }
 
 void GameScene::Draw()
@@ -249,7 +273,13 @@ void GameScene::Draw()
 	Object3d::PreDraw(cmdList);
 
 	// 3Dオブクジェクトの描画
-	object3d->Draw();
+	if (hitFlag == false) { //当たっていない時は白い球
+		object3d->Draw();
+	}
+	else { //当たっている時は赤い球
+		hitSphere_->Draw();
+	}
+	plane_->Draw();
 
 	/// <summary>
 	/// ここに3Dオブジェクトの描画処理を追加できる

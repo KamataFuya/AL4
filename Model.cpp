@@ -25,8 +25,6 @@ using namespace Microsoft::WRL;
 //静的メンバ変数の実体
 ID3D12Device* Model::device = nullptr;
 
-
-
 Model* Model::LoadFromOBJ(const std::string& modelname){	
     //新たなModel型のインスタンスをnewする
     Model* model = new Model();
@@ -65,13 +63,10 @@ void Model::CreateBuffers(){
 	UINT sizeVB = static_cast<UINT>(sizeof(VertexPosNormalUv) * vertices.size());
 	UINT sizeIB = static_cast<UINT>(sizeof(unsigned short) * indices.size());
 
-	//// ヒーププロパティ
-	//CD3DX12_HEAP_PROPERTIES heapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-	//// リソース設定
-	//CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(sizeVB);
-
+	// ヒーププロパティ
 	CD3DX12_HEAP_PROPERTIES heapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-	CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer((sizeof(ConstBufferDataB1) + 0xff) & ~0xff);
+	// リソース設定
+	CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(sizeVB);
 
 	// 頂点バッファ生成
 	result = device->CreateCommittedResource(
@@ -119,18 +114,20 @@ void Model::CreateBuffers(){
 	ibView.Format = DXGI_FORMAT_R16_UINT;
 	ibView.SizeInBytes = sizeIB;
 
-	
-	
+	//定数バッファ用
+	CD3DX12_HEAP_PROPERTIES heapProps1 = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+	CD3DX12_RESOURCE_DESC resourceDesc1 = CD3DX12_RESOURCE_DESC::Buffer((sizeof(ConstBufferDataB1) + 0xff) & ~0xff);
 
 	//定数バッファの生成
 	result = device->CreateCommittedResource(
-		&heapProps,
+		&heapProps1,
 		D3D12_HEAP_FLAG_NONE,
-		&resourceDesc,
+		&resourceDesc1,
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
 		IID_PPV_ARGS(&constBuffB1)
 	);
+
 	//定数バッファへデータ転送
 	ConstBufferDataB1* constMap1 = nullptr;
 	result = constBuffB1->Map(0, nullptr, (void**)&constMap1);

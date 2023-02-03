@@ -62,11 +62,24 @@ private: // メンバ変数
 	/// </summary>
 	Sprite* spriteBG = nullptr;
 	Object3d* object3d = nullptr;
+	Object3d* plane_ = nullptr;
+	Object3d* triangle_ = nullptr;
+	Object3d* hitSphere_ = nullptr;
 
 	Model* model_ = nullptr;
+	Model* modelPlane_ = nullptr;
+	Model* modelTriangle_ = nullptr;
+	Model* modelHitSphere_ = nullptr;
 
 	Sprite* sprite01 = nullptr;
 	Sprite* sprite02 = nullptr;
+
+	//フラグ
+	bool hitFlag = false;
+
+	//速さ
+	float speedY = 0.50f;
+	DirectX::XMVECTOR moveCollisionY = DirectX::XMVectorSet(0, 0.50f, 0, 0);
 
 	//当たり判定 球
 	Sphere sphere;
