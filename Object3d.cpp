@@ -5,6 +5,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include "BaseCollider.h"
 using namespace std;
 
 #pragma comment(lib, "d3dcompiler.lib")
@@ -293,6 +294,12 @@ void Object3d::UpdateViewMatrix()
 	matView = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
 }
 
+Object3d::~Object3d(){
+	if (collider) {
+		delete collider;
+	}
+}
+
 bool Object3d::Initialize()
 {
 	// nullptrチェック
@@ -313,20 +320,8 @@ bool Object3d::Initialize()
 		IID_PPV_ARGS(&constBuffB0)
 	);
 
-	/*resourceDesc = CD3DX12_RESOURCE_DESC::Buffer((sizeof(ConstBufferDataB1) + 0xff) & ~0xff);*/
-
-	
-
-	// 定数バッファの生成
-	/*result = device->CreateCommittedResource(
-		&heapProps,
-		D3D12_HEAP_FLAG_NONE,
-		&resourceDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(&constBuffB1)
-	);
-	assert(SUCCEEDED(result));*/
+	//クラス名の文字列を取得
+	name = typeid(*this).name();
 
 	return true;
 }
@@ -356,19 +351,15 @@ void Object3d::Update()
 		matWorld *= parent->matWorld;
 	}
 
-	// 定数バッファへデータ転送
-	//ConstBufferData* constMap = nullptr;
-	//result = constBuff->Map(0, nullptr, (void**)&constMap);
-	//constMap->color = color;
-	//constMap->mat = matWorld * matView * matProjection;	// 行列の合成
-	//constBuff->Unmap(0, nullptr);
-
 	ConstBufferDataB0* constMap = nullptr;
 	result = constBuffB0->Map(0, nullptr, (void**)&constMap);
 	constMap->mat = matWorld * matView * matProjection;
 	constBuffB0->Unmap(0, nullptr);
 
-	
+	//当たり判定更新
+	if (collider) {
+		collider->Update();
+	}
 }
 
 void Object3d::Draw()
@@ -385,4 +376,9 @@ void Object3d::Draw()
 	
 	//モデルを描画
 	model->Draw(cmdList, 1);
+}
+
+void Object3d::SetCollider(BaseCollider* collider){
+	collider->SetObject(this);
+	this->collider = collider;
 }
